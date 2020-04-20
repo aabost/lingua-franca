@@ -116,6 +116,42 @@
 	      </includes>
 	    </fileset>
 	    <fileset>
+	      <directory>${basedir}/../org.icyphy.linguafranca/xtend-gen/</directory>
+	      <includes>
+		<include>**/*</include>
+	      </includes>
+	    </fileset>
+	    <fileset>
+	      <directory>${basedir}/../org.icyphy.linguafranca.diagram/xtend-gen/</directory>
+	      <includes>
+		<include>**/*</include>
+	      </includes>
+	    </fileset>
+	    <fileset>
+	      <directory>${basedir}/../org.icyphy.linguafranca.ide/xtend-gen/</directory>
+	      <includes>
+		<include>**/*</include>
+	      </includes>
+	    </fileset>
+	    <fileset>
+	      <directory>${basedir}/../org.icyphy.linguafranca.tests/xtend-gen/</directory>
+	      <includes>
+		<include>**/*</include>
+	      </includes>
+	    </fileset>
+	    <fileset>
+	      <directory>${basedir}/../org.icyphy.linguafranca.ui/xtend-gen/</directory>
+	      <includes>
+		<include>**/*</include>
+	      </includes>
+	    </fileset>
+	    <fileset>
+	      <directory>${basedir}/../org.icyphy.linguafranca.web/xtend-gen/</directory>
+	      <includes>
+		<include>**/*</include>
+	      </includes>
+	    </fileset>
+	    <fileset>
 	      <directory>${basedir}/model/generated/</directory>
 	    </fileset>
 	  </filesets>

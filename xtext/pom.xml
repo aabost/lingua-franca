@@ -18,6 +18,7 @@
     <module>org.icyphy.linguafranca.tests</module>
     <module>org.icyphy.linguafranca.ui.tests</module>
     <module>org.icyphy.linguafranca.sdk</module>
+    <module>org.icyphy.linguafranca.diagram</module>
     <module>org.icyphy.linguafranca.updatesite</module>
   </modules>
   
@@ -52,6 +53,10 @@
       <id>Xtext Update Site</id>
       <layout>p2</layout>
       <url>https://download.eclipse.org/modeling/tmf/xtext/updates/releases/${xtext.version}/</url>
+    </repository>
+    <repository>
+      <id>klighd</id>
+      <url>http://kieler.github.io/KLighD/repo</url>
     </repository>
   </repositories>
   
