@@ -321,10 +321,15 @@ bool wait_until(instant_t logical_time_ns) {
         // We still wait for time to elapse in case asynchronous events come in.
         return_value = false;
     }
+    interval_t wait_until_time_ns = logical_time_ns;
+#ifdef _LF_COORD_DECENTRALIZED // Only apply the STP offset if coordination is decentralized
+    // Apply the STP offset to the logical time
+    wait_until_time_ns += _lf_global_time_STP_offset;
+#endif
     if (!fast) {
         // Convert the logical time to a timespec.
         // timespec is seconds and nanoseconds.
-        struct timespec wait_until_time = {(time_t)logical_time_ns / BILLION, (long)logical_time_ns % BILLION};
+        struct timespec wait_until_time = {(time_t)wait_until_time_ns / BILLION, (long)wait_until_time_ns % BILLION};
 
         // printf("DEBUG: -------- Waiting for physical time to match logical time %llu.\n", logical_time_ns);
         // printf("DEBUG: -------- which is %splus %ld nanoseconds.\n", ctime(&wait_until_time.tv_sec), wait_until_time.tv_nsec);
@@ -440,7 +445,7 @@ bool __next() {
         // Advance current time to match that of the first event on the queue.
         _lf_advance_logical_time(next_time);
 
-        DEBUG_PRINT("__next(): ********* Advanced logical time to %lld.", current_time - start_time);
+        // DEBUG_PRINT("__next(): ********* Advanced logical time to %lld.", current_time - start_time);
 
         // Invoke code that must execute before starting a new logical time round,
         // such as initializing outputs to be absent.
@@ -747,7 +752,7 @@ void* worker(void* arg) {
         
 
             bool violation = false;
-            // If the tardiness for the reaction is true,
+            // If the is_tardy for the reaction is true,
             // an input trigger to this reaction has been triggered at a later
             // logical time than originally anticipated. In this case, a special
             // tardy reaction will be invoked.             
@@ -760,9 +765,9 @@ void* worker(void* arg) {
             // @note The tardy handler and the deadline handler are not mutually exclusive.
             //  In other words, both can be invoked for a reaction if it is triggered late
             //  in logical time (tardy) and also misses the constraint on physical time (deadline).
-            // @note In absence of a tardy handler, the tardiness will be passed down the reaction
+            // @note In absence of a tardy handler, the is_tardy will be passed down the reaction
             //  chain until it is dealt with in a downstream tardy handler.
-            if (reaction->tardiness == true) {
+            if (reaction->is_tardy == true) {
                 reaction_function_t handler = reaction->tardy_handler;
                 DEBUG_PRINT("Invoking tardiness handler %p.", handler);
                 // Invoke the tardy handler if there is one.
@@ -778,8 +783,8 @@ void* worker(void* arg) {
                     // triggered reactions into the queue or execute them directly if possible.
                     schedule_output_reactions(reaction);
                     
-                    // Reset the tardiness because it has been dealt with
-                    reaction->tardiness = false;
+                    // Reset the is_tardy because it has been dealt with
+                    reaction->is_tardy = false;
                 }
             }
             // If the reaction has a deadline, compare to current physical time
@@ -849,9 +854,9 @@ void* worker(void* arg) {
                 // be the one to advance time.
                 pqueue_remove(executing_q, reaction);
             }
-            // Reset the tardiness because it has been passed
+            // Reset the is_tardy because it has been passed
             // down the chain
-            reaction->tardiness = false;
+            reaction->is_tardy = false;
 
             // printf("DEBUG: worker: Done invoking reaction.\n");
         }
@@ -901,10 +906,20 @@ void __execute_reactions_during_wrapup() {
     while (pqueue_size(reaction_q) > 0) {
         pthread_mutex_lock(&mutex);
         reaction_t* reaction = (reaction_t*)pqueue_pop(reaction_q);
-        pthread_mutex_unlock(&mutex);
-        // Invoke the reaction function.
-        DEBUG_PRINT("wrapup(): Invoking reaction.\n");
-        reaction->function(reaction->self);
+        // Check if the reaction is tardy
+        if (reaction->is_tardy && (reaction->tardy_handler != NULL)) {
+            // Invoke the tardy handler if it exists.
+            pthread_mutex_unlock(&mutex);
+            DEBUG_PRINT("wrapup(): Invoking the tardy handler.\n");
+            reaction->tardy_handler(reaction->self);
+        } else {
+
+            pthread_mutex_unlock(&mutex);
+            // Invoke the reaction function.
+            DEBUG_PRINT("wrapup(): Invoking reaction.\n");
+            reaction->function(reaction->self);
+        }
+
 
         // If the reaction produced outputs, insert the resulting triggered
         // reactions into the reaction queue.
